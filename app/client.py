@@ -146,14 +146,24 @@ class SZUNetworkClient:
             return False
 
     def keep_alive(self):
-        """Daemon mode to keep the connection alive."""
+        """
+        Daemon mode: Check network status periodically and relogin if disconnected.
+        """
         logger.info(f"Starting Keep-Alive Daemon (Interval: {settings.RETRY_INTERVAL}s)")
+        
         while True:
             try:
-                # Here we could check connectivity first, but simply logging in again is often safe/easier for SRUN
-                # Or we can check if we have internet access
-                self.login()
+                # 1. 先做体检：网络通吗？
+                if is_internet_connected():
+                    # 网络正常，只打印个 debug 日志（平时看不见，清爽）
+                    logger.debug("✅ Network is stable. Sleeping...")
+                else:
+                    # 2. 网络断了！触发登录
+                    logger.warning("⚠️ Network disconnected detected! Initiating login...")
+                    self.login()
+                    
             except Exception as e:
-                logger.error(f"Daemon loop error: {e}")
+                logger.error(f"Unexpected error in daemon loop: {e}")
             
+            # 3. 休息
             time.sleep(settings.RETRY_INTERVAL)
