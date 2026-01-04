@@ -11,7 +11,7 @@ def configure_logging():
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
         level="INFO"
     )
-    logger.add("login.log", rotation="1 MB", retention="7 days", level="DEBUG")
+    logger.add("logs/monitor.log", rotation="1 day", retention="7 days", level="DEBUG")
 
 def main():
     parser = argparse.ArgumentParser(description="SZU Teaching Area Network Auto-Login")

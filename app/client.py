@@ -7,7 +7,7 @@ from loguru import logger
 from typing import Tuple, Dict, Any
 
 from app.config import settings
-from app.utils import get_local_ip
+from app.utils import get_local_ip,is_internet_connected
 from encryption.srun_md5 import get_md5
 from encryption.srun_sha1 import get_sha1
 from encryption.srun_xencode import get_xencode
@@ -156,10 +156,10 @@ class SZUNetworkClient:
                 # 1. 先做体检：网络通吗？
                 if is_internet_connected():
                     # 网络正常，只打印个 debug 日志（平时看不见，清爽）
-                    logger.debug("✅ Network is stable. Sleeping...")
+                    logger.debug("✅ Network check passed (Status: 204/200). Sleeping...")
                 else:
                     # 2. 网络断了！触发登录
-                    logger.warning("⚠️ Network disconnected detected! Initiating login...")
+                    logger.warning("⚠️ Network disconnected or captive portal detected! Initiating login...")
                     self.login()
                     
             except Exception as e:

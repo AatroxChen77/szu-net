@@ -30,16 +30,25 @@ def get_local_ip(target_host="8.8.8.8", target_port=80) -> str:
         # Fallback for localhost if offline (though login will fail anyway)
         return "127.0.0.1"
 
-def is_internet_connected(test_url: str = "http://www.baidu.com", timeout: int = 3) -> bool:
+def is_internet_connected(test_url: str = "http://connect.rom.miui.com/generate_204", timeout: int = 3) -> bool:
     """
-    检查互联网连接状态
-    :param test_url: 用于测试的网站 (推荐国内访问快的)
+    检查互联网连接状态 (Captive Portal Detection)
+    :param test_url: 用于测试的网站 (默认使用 MIUI 的 204 检测接口)
     :param timeout: 超时时间 (秒)
-    :return: True (通) / False (断)
+    :return: True (通) / False (断/被劫持)
     """
     try:
-        # 使用 head 请求减少流量，timeout 设短一点防止卡顿
-        requests.head(test_url, timeout=timeout)
-        return True
-    except:
+        # allow_redirects=False: 禁止跟随重定向，防止被跳转到登录页
+        resp = requests.head(test_url, timeout=timeout, allow_redirects=False)
+        
+        # 只有当状态码为 204 (MIUI) 或 200 (普通网站且无重定向) 时才认为网络正常
+        if resp.status_code == 204:
+            return True
+        if resp.status_code == 200 and test_url != "http://connect.rom.miui.com/generate_204":
+            return True
+            
+        logger.debug(f"Network check failed. Status: {resp.status_code}, URL: {test_url}")
+        return False
+    except Exception as e:
+        logger.debug(f"Network check exception: {e}")
         return False
