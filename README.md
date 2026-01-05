@@ -27,8 +27,9 @@ cd szu-net
 
 **选项 A: 使用 Conda (推荐)**
 ```bash
-conda create -n szu-net python=3.9
+conda create -n szu-net python=3.10
 conda activate szu-net
+conda install -c conda-forge nodejs
 pip install -r requirements.txt
 ```
 
