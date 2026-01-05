@@ -13,7 +13,7 @@ def configure_logging():
     )
     logger.add("logs/monitor.log", rotation="1 day", retention="7 days", level="DEBUG")
 
-def main():
+def run_daemon(force_loop=False):
     parser = argparse.ArgumentParser(description="SZU Teaching Area Network Auto-Login")
     parser.add_argument("--loop", action="store_true", help="Run in daemon mode (keep-alive)")
     parser.add_argument("--interval", type=int, help="Override check interval in seconds", default=settings.RETRY_INTERVAL)
@@ -28,7 +28,7 @@ def main():
     try:
         client = SZUNetworkClient()
         
-        if args.loop:
+        if args.loop or force_loop:
             client.keep_alive()
         else:
             success = client.login()
@@ -39,4 +39,4 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    run_daemon()
