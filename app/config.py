@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     SRUN_N: str = '200'
     SRUN_TYPE: str = '1'
     
+    # Network Zone Configuration
+    NETWORK_ZONE: str = 'teaching'  # 'teaching' or 'dorm'
+    
     # Paths
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
     

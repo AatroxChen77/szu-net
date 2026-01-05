@@ -16,7 +16,9 @@ class SZUNetworkClient:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': settings.USER_AGENT})
-        self._init_js_context()
+        # Lazy loading of JS context: only initialize if needed (Teaching Zone)
+        if settings.NETWORK_ZONE == 'teaching':
+            self._init_js_context()
         
     def _init_js_context(self):
         """Initialize PyExecJS context with the encryption script."""
@@ -96,9 +98,9 @@ class SZUNetworkClient:
         chksum = get_sha1(chkstr)
         
         return encoded_info, hmd5, chksum
-
-    def login(self) -> bool:
-        """Execute the full login flow."""
+        
+    def _login_teaching(self) -> bool:
+        """Execute the full login flow for Teaching Zone (SRUN)."""
         try:
             ip = get_local_ip()
             logger.info(f"Starting login process for IP: {ip} / User: {settings.SRUN_USERNAME}")
@@ -144,6 +146,64 @@ class SZUNetworkClient:
         except Exception as e:
             logger.exception(f"An unexpected error occurred during login: {e}")
             return False
+
+    def _login_dorm(self) -> bool:
+        """Execute the login flow for Dorm Zone (Dr.COM)."""
+        try:
+            ip = get_local_ip()
+            logger.info(f"Starting Dorm Zone login process for IP: {ip} / User: {settings.SRUN_USERNAME}")
+            
+            timestamp = int(time.time() * 1000)
+            params = {
+                'callback': 'dr1003',
+                'login_method': '1',
+                'user_account': f',0,{settings.SRUN_USERNAME}',
+                'user_password': settings.SRUN_PASSWORD,
+                'wlan_user_ip': ip,
+                'jsVersion': '4.1.3'
+            }
+            
+            # Dorm zone URL
+            url = "http://172.30.255.42:801/eportal/portal/login"
+            
+            logger.debug("Sending Dorm Zone login request...")
+            resp = self.session.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            
+            # Handle potential encoding issues (Dr.COM might return GBK/GB2312)
+            resp.encoding = 'utf-8'  # Try forcing utf-8 first, or rely on apparent_encoding if needed
+
+            # Strict success validation
+            # Captive portals often return 200 OK even on failure, so we must check the body.
+            if '"result":1' in resp.text or '"msg":"成功"' in resp.text:
+                logger.success(f"Dorm Zone Login Successful!")
+                return True
+            else:
+                # Try to capture error message
+                error_msg = "Unknown error"
+                if '"msg":"' in resp.text:
+                    match = re.search(r'"msg":"(.*?)"', resp.text)
+                    if match:
+                        error_msg = match.group(1)
+                
+                logger.error(f"Dorm Zone Login Failed: {error_msg}")
+                logger.debug(f"Full response: {resp.text}")
+                return False
+                
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred during Dorm Zone login: {e}")
+            return False
+
+    def login(self) -> bool:
+        """
+        Dispatch login to the appropriate strategy based on configuration.
+        """
+        if settings.NETWORK_ZONE == 'dorm':
+            logger.info("Executing Dorm Zone Login Strategy")
+            return self._login_dorm()
+        else:
+            logger.info("Executing Teaching Zone Login Strategy")
+            return self._login_teaching()
 
     def keep_alive(self):
         """
