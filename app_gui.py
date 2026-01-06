@@ -1,7 +1,9 @@
 import threading
 import queue
 import pystray
-from PIL import Image, ImageDraw
+import pathlib
+import ctypes
+from PIL import Image, ImageDraw, ImageTk
 from dotenv import set_key
 from loguru import logger
 import ttkbootstrap as ttk
@@ -27,6 +29,13 @@ class SZUNetworkGUI(ttk.Window):
     Main GUI Class for SZU Network Guardian.
     """
     def __init__(self):
+        # Set AppUserModelID so Windows treats this as a standalone app with its own icon
+        try:
+            myappid = 'szu.network.guardian.gui.v1'
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
+
         # Initialize window with 'cyborg' theme (Dark Mode)
         super().__init__(themename="cyborg")
         self.title("SZU Network Guardian")
@@ -36,6 +45,13 @@ class SZUNetworkGUI(ttk.Window):
         # Initialize thread-safe log queue
         self.log_queue = queue.Queue()
         self.setup_logging()
+
+        # Load Icon
+        self.icon_image = self.load_icon()
+        # Keep a reference to the ImageTk object to prevent garbage collection
+        self.tk_icon = ImageTk.PhotoImage(self.icon_image)
+        # Apply icon to window title bar
+        self.wm_iconphoto(True, self.tk_icon)
         
         # System Tray setup
         self.protocol("WM_DELETE_WINDOW", self.on_close_request)
@@ -235,11 +251,26 @@ class SZUNetworkGUI(ttk.Window):
             pystray.MenuItem("Show Window", self.show_window, default=True),
             pystray.MenuItem("Exit", self.quit_app)
         )
-        self.tray_icon = pystray.Icon("SZU Net", self.create_tray_icon(), "SZU Network Guardian", menu)
+        # Use the already loaded icon image
+        self.tray_icon = pystray.Icon("SZU Net", self.icon_image, "SZU Network Guardian", menu)
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
-    def create_tray_icon(self):
-        """Generate a 64x64 icon programmatically."""
+    def load_icon(self):
+        """
+        Load 'assets/icon.png' if it exists, otherwise generate a default colored square.
+        Returns: PIL.Image
+        """
+        icon_path = pathlib.Path(__file__).parent / "assets" / "icon.png"
+        
+        if icon_path.exists():
+            try:
+                return Image.open(icon_path)
+            except Exception as e:
+                logger.warning(f"Failed to load icon from {icon_path}: {e}")
+        else:
+            logger.warning(f"Icon not found at {icon_path}. Using default.")
+            
+        # Fallback: Generate a 64x64 icon programmatically
         width = 64
         height = 64
         color = (0, 255, 255) # Cyan
