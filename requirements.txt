@@ -5,3 +5,4 @@ python-dotenv~=1.0.0
 loguru~=0.7.2
 click~=8.1.7
 rich
+ttkbootstrap

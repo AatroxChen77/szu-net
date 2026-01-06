@@ -5,7 +5,9 @@ This project provides a robust, automated login solution for the Shenzhen Univer
 1.  **Teaching Area**: Interacts with the SRUN authentication system (requires complex JS-based encryption).
 2.  **Dormitory Area**: Interacts with the Dr.COM Web Portal (simpler HTTP flow).
 
-It features a "keep-alive" daemon mode that continuously monitors network connectivity and auto-reconnects when dropped, ensuring uninterrupted internet access.
+It features a "keep-alive" daemon mode that continuously monitors network connectivity and auto-reconnects when dropped. The application can run as:
+- A **CLI Daemon** with a rich terminal dashboard.
+- A **System Tray Application** (Windows) for background operation.
 
 ## Tech Stack
 - **Language**: Python 3
@@ -18,8 +20,12 @@ It features a "keep-alive" daemon mode that continuously monitors network connec
   - **CLI & UI**:
     - `rich`: For beautiful terminal output, dashboards, and animations.
     - `click`: (Implicitly used or available for future CLI expansion).
+  - **GUI (Windows)**:
+    - `pystray`: For system tray icon and menu management.
+    - `Pillow` (PIL): For generating tray icons.
+    - `pywin32` (`win32gui`, `win32con`): For window management (hiding/showing console).
 - **Runtime Environment**:
-  - **OS**: Cross-platform (Windows, Linux, macOS).
+  - **OS**: Cross-platform (Windows, Linux, macOS) for CLI; Windows-specific features for GUI.
   - **Dependencies**: Node.js (required by `PyExecJS` for SRUN encryption).
 
 ## Project Conventions
@@ -31,8 +37,9 @@ It features a "keep-alive" daemon mode that continuously monitors network connec
 
 ### Structure
 - **Entry Points**:
-  - `cli.py`: The primary entry point for users. Provides a rich TUI dashboard.
-  - `main.py`: The underlying logic runner. Handles argument parsing (`--loop`, `--interval`) and signals.
+  - `gui.py`: **System Tray Application**. Runs the daemon in a background thread and manages a tray icon for visibility control.
+  - `cli.py`: **Rich CLI**. The primary terminal entry point, featuring a TUI dashboard and startup animations.
+  - `main.py`: **Core Runner**. Handles argument parsing (`--loop`, `--interval`), signal handling (SIGINT/SIGTERM), and logging configuration.
 - **`app/`**:
   - `client.py`: `SZUNetworkClient`. Implements the Strategy pattern to switch between `_login_teaching` (SRUN) and `_login_dorm` (Dr.COM) based on config.
   - `config.py`: `Settings` definition using `pydantic`.
@@ -44,6 +51,9 @@ It features a "keep-alive" daemon mode that continuously monitors network connec
 - **Strategy Pattern**: The `login()` method dynamically dispatches to the correct backend (`teaching` vs `dorm`) based on `NETWORK_ZONE`.
 - **Hybrid Encryption**: Teaching zone login uses a mix of Python (hashing) and JavaScript (custom encoding via `PyExecJS`).
 - **Daemon/Keep-Alive**: An infinite loop that checks `is_internet_connected()` (captive portal detection) and triggers login only when needed.
+- **Concurrency**:
+  - The GUI uses `threading` to run the network client in a daemon thread while the main thread handles the system tray event loop.
+  - Graceful shutdown is managed via `threading.Event` to coordinate between UI/Signal handlers and the worker loop.
 
 ## Domain Context
 ### 1. Teaching Area (SRUN)
