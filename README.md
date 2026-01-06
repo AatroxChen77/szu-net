@@ -49,9 +49,8 @@
 
 ## <span id="installation">⚙️ 安装指南 (Installation)</span>
 
-### 1. 环境要求
-*   **Python**: 3.10
-*   **Node.js**: 必需（用于处理教学区 SRUN 协议的加密逻辑）
+### 1. 前置要求 (Prerequisites)
+*   请确保已安装 **Conda** (Anaconda 或 Miniconda)。
 
 ### 2. 获取代码
 ```bash
@@ -59,12 +58,15 @@ git clone https://github.com/your-repo/szu-net.git
 cd szu-net
 ```
 
-### 3. 安装依赖
+### 3. 环境设置 (Setup)
+只需一步即可完成所有依赖安装（包含 Python, Node.js 及 Python 库）：
+
 ```bash
-conda create -n szu-net python=3.10 -y
+# 创建环境
+conda env create -f environment.yml
+
+# 激活环境
 conda activate szu-net
-conda install -c conda-forge nodejs
-pip install -r requirements.txt
 ```
 
 ---
