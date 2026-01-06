@@ -51,4 +51,3 @@ dependencies:
       - typing-inspection==0.4.2
       - urllib3==2.6.2
       - win32-setctime==1.2.0
-prefix: C:\Users\Aaten77\.conda\envs\szu-net
