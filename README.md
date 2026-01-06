@@ -2,7 +2,7 @@
 
 # SZU Network Guardian
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Stable-brightgreen)](https://github.com/your-repo/szu-net)
 
@@ -50,7 +50,7 @@
 ## <span id="installation">⚙️ 安装指南 (Installation)</span>
 
 ### 1. 环境要求
-*   **Python**: 3.8+
+*   **Python**: 3.10
 *   **Node.js**: 必需（用于处理教学区 SRUN 协议的加密逻辑）
 
 ### 2. 获取代码
@@ -61,7 +61,9 @@ cd szu-net
 
 ### 3. 安装依赖
 ```bash
-# 推荐使用虚拟环境
+conda create -n szu-net python=3.10 -y
+conda activate szu-net
+conda install -c conda-forge nodejs
 pip install -r requirements.txt
 ```
 
