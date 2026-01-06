@@ -146,6 +146,6 @@ python main.py --loop --interval 60
 
 ---
 
-## � 许可证 (License)
+## 许可证 (License)
 
 [MIT License](LICENSE)
