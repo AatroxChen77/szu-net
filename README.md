@@ -103,6 +103,19 @@ python main.py --loop --interval 60
 *   **Encryption (`encryption/`)**:
     *   包含处理 SRUN 协议所需的 XEncode, MD5, SHA1 算法实现及 `srun_base64.js`。
 
+## ❓ 常见问题 & 故障排查 (Troubleshooting)
+
+### 🛑 脚本运行中突然卡住/不刷新日志？
+**现象**：程序运行一段时间后，日志停止更新（疑似假死），只有**按下回车键 (Enter)** 后，才会瞬间刷出一堆日志并继续运行。
+
+**原因**：这是 Windows 命令提示符 (CMD) 的 **"快速编辑模式" (Quick Edit Mode)** 导致的。当你无意中点击了窗口内容时，CMD 会挂起进程等待你复制文本。
+
+**解决方法**：
+1. 在运行脚本的黑窗口**标题栏**上点击右键 -> 选择 **"属性" (Properties)**。
+2. 在 **"选项" (Options)** 标签页中。
+3. **取消勾选** `快速编辑模式 (QuickEdit Mode)`。
+4. 点击确定。
+
 ## 📝 许可证 (License)
 
 [MIT License](LICENSE)
