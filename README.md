@@ -18,11 +18,11 @@
   <a href="#features">✨ 核心特性</a> •
   <a href="#installation">⚙️ 安装指南</a> •
   <a href="#configuration">⚙️ 配置说明</a> •
-  <a href="#usage">� 使用方法</a> •
+  <a href="#usage">🚀 使用方法</a> •
   <a href="#troubleshooting">❓ 常见问题</a>
 </p>
 
-## 简介 (Introduction)
+## 📖 简介 (Introduction)
 
 本项目旨在提供一个稳定、跨平台的校园网自动登录解决方案。无论是教学区复杂的 SRUN 协议（涉及 JS 逆向加密），还是宿舍区 Dr.COM 的 Web 认证，本工具都能通过统一的配置和接口轻松搞定。
 
@@ -146,6 +146,6 @@ python main.py --loop --interval 60
 
 ---
 
-## 许可证 (License)
+## 📜 许可证 (License)
 
 [MIT License](LICENSE)
