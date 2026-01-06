@@ -51,6 +51,9 @@ class SZUNetworkClient:
             token = match.group(1)
             logger.debug(f"Got token: {token}")
             return token
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error getting token: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error getting token: {e}")
             raise
@@ -132,17 +135,27 @@ class SZUNetworkClient:
             
             # Parse response
             if '"suc_msg":"' in resp.text:
-                msg = re.search(r'"suc_msg":"(.*?)"', resp.text).group(1)
-                logger.success(f"Login Successful! Server response: {msg}")
-                return True
+                match = re.search(r'"suc_msg":"(.*?)"', resp.text)
+                if match:
+                    msg = match.group(1)
+                    logger.success(f"Login Successful! Server response: {msg}")
+                    return True
+                else:
+                    logger.warning("Login appeared successful but failed to parse success message.")
+                    return True # Still consider success if keyword present
             else:
                 # Try to capture error message
                 error_msg = "Unknown error"
                 if '"error_msg":"' in resp.text:
-                    error_msg = re.search(r'"error_msg":"(.*?)"', resp.text).group(1)
+                    match = re.search(r'"error_msg":"(.*?)"', resp.text)
+                    if match:
+                        error_msg = match.group(1)
                 logger.error(f"Login Failed: {error_msg}")
                 return False
                 
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error during login: {e}")
+            return False
         except Exception as e:
             logger.exception(f"An unexpected error occurred during login: {e}")
             return False
@@ -205,13 +218,14 @@ class SZUNetworkClient:
             logger.info("Executing Teaching Zone Login Strategy")
             return self._login_teaching()
 
-    def keep_alive(self):
+    def keep_alive(self, stop_event=None):
         """
         Daemon mode: Check network status periodically and relogin if disconnected.
+        :param stop_event: threading.Event or similar object to signal shutdown
         """
         logger.info(f"Starting Keep-Alive Daemon (Interval: {settings.RETRY_INTERVAL}s)")
         
-        while True:
+        while not (stop_event and stop_event.is_set()):
             try:
                 # 1. 先做体检：网络通吗？
                 if is_internet_connected():
@@ -225,5 +239,10 @@ class SZUNetworkClient:
             except Exception as e:
                 logger.error(f"Unexpected error in daemon loop: {e}")
             
-            # 3. 休息
-            time.sleep(settings.RETRY_INTERVAL)
+            # 3. 休息 (Support graceful interrupt during sleep)
+            if stop_event:
+                if stop_event.wait(settings.RETRY_INTERVAL):
+                    logger.info("Daemon stopping received signal.")
+                    break
+            else:
+                time.sleep(settings.RETRY_INTERVAL)

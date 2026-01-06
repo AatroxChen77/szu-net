@@ -1,4 +1,5 @@
 from pathlib import Path
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -38,5 +39,26 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @field_validator('SRUN_USERNAME', 'SRUN_PASSWORD')
+    @classmethod
+    def validate_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError('Must not be empty')
+        return v
+
+    @field_validator('RETRY_INTERVAL')
+    @classmethod
+    def validate_positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError('Must be positive')
+        return v
+
+    @field_validator('NETWORK_ZONE')
+    @classmethod
+    def validate_zone(cls, v: str) -> str:
+        if v not in ('teaching', 'dorm'):
+            raise ValueError("Must be either 'teaching' or 'dorm'")
+        return v
 
 settings = Settings()
