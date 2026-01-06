@@ -1,94 +1,108 @@
-# 🌐 SZU 教学区校园网自动登录脚本
+# 🌐 SZU Network Guardian | 深圳大学校园网双区自动登录
 
-专为深圳大学（SZU）教学区网络设计的自动登录工具。基于 Python 实现，内置 SRUN 认证协议支持，支持断线自动重连与守护模式。
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Stable-brightgreen)
 
-## ✨ 功能特性
+> **全场景覆盖**：专为深圳大学（SZU）设计的网络认证工具，现已支持 **教学区 (SRUN)** 与 **宿舍区 (Dr.COM)** 双网区自动登录与断线重连。
 
-*   🚀 **智能启动**：通过 `start.bat` 自动检测运行环境（Conda/System Python），一键启动。
-*   🔄 **守护模式**：支持 `--loop` 参数（默认开启），每 5 分钟（可配）自动检测网络状态，掉线即秒连。
-*   🔐 **安全配置**：使用 `.env` 文件管理敏感信息，无需修改代码。
-*   🛠️ **协议原生**：内置 Python/JS 混合加密逻辑，完美适配 SRUN 认证，无需浏览器驱动。
+## 📖 简介 (Introduction)
 
-## 🛠️ 环境要求
+本项目旨在提供一个稳定、跨平台的校园网自动登录解决方案。无论是教学区复杂的 SRUN 协议（涉及 JS 逆向加密），还是宿舍区 Dr.COM 的 Web 认证，本工具都能通过统一的配置和接口轻松搞定。
 
-*   **操作系统**: 🪟 Windows (脚本依赖 `ipconfig` 输出格式)
-*   **Python**: 🐍 Python 3.8+
-*   **运行时**: 🟢 Node.js (必需，用于执行加密 JS 代码)
+它内置了 **"Keep-Alive" 守护模式**，能够持续监控网络连通性（通过 Captive Portal 检测），一旦发现断网或认证失效，立即触发重连，确保您的设备 24 小时在线。
 
-## 📦 安装指南
+## ✨ 核心特性 (Key Features)
 
-### 1. 获取代码
+*   🏰 **双区支持 (Dual-Zone)**
+    *   **教学区 (Teaching)**: 原生实现 SRUN 协议，内置 Python/JS 混合加密引擎 (PyExecJS)，无需浏览器驱动。
+    *   **宿舍区 (Dorm)**: 完美适配 Dr.COM Web Portal 认证流程，支持 GBK/UTF-8 编码自动处理。
+*   🖥️ **炫酷 TUI 仪表盘**
+    *   基于 `rich` 库构建的终端用户界面，提供启动动画、实时状态面板和清晰的日志输出。
+*   🔄 **智能守护 (Daemon Mode)**
+    *   自动检测网络状态（HTTP 204 Check），断线秒连。
+    *   支持自定义检测间隔。
+*   ⚙️ **配置分离**
+    *   通过 `.env` 环境变量管理敏感信息（账号/密码），安全且易于迁移。
+*   🛠️ **跨平台**
+    *   支持 Windows, Linux, macOS。
+
+## 🛠️ 安装指南 (Installation)
+
+### 1. 环境要求
+*   **Python**: 3.8+
+*   **Node.js**: 必需（用于处理教学区 SRUN 协议的加密逻辑）
+
+### 2. 获取代码
 ```bash
 git clone https://github.com/your-repo/szu-net.git
 cd szu-net
 ```
 
-### 2. 环境配置 (二选一)
-
-**选项 A: 使用 Conda (推荐)**
+### 3. 安装依赖
 ```bash
-conda create -n szu-net python=3.10
-conda activate szu-net
-conda install -c conda-forge nodejs
+# 推荐使用虚拟环境
 pip install -r requirements.txt
 ```
 
-**选项 B: 使用系统 Python**
-```bash
-pip install -r requirements.txt
+## ⚙️ 配置说明 (Configuration)
+
+在项目根目录下创建一个 `.env` 文件（可复制 `.env.example`），并填入以下内容：
+
+```ini
+# --- 认证信息 ---
+SRUN_USERNAME=2020123456      # 你的学号
+SRUN_PASSWORD=your_password   # 你的密码
+
+# --- 网络区域选择 ---
+# teaching = 教学区 (SRUN)
+# dorm     = 宿舍区 (Dr.COM)
+NETWORK_ZONE=teaching
+
+# --- 进阶配置 (可选) ---
+RETRY_INTERVAL=300            # 守护模式检查间隔(秒)
+SRUN_AC_ID=12                 # 教学区 AC ID (通常无需修改)
 ```
 
-### 3. 填写配置
-复制配置文件模板，并填入你的校园网账号密码：
+## ▶️ 使用方法 (Usage)
 
-1.  将项目根目录下的 `.env.example` 复制一份并重命名为 `.env`。
-2.  用记事本打开 `.env`，修改以下内容：
-    ```ini
-    SRUN_USERNAME=2020123456      # 你的学号
-    SRUN_PASSWORD=your_password   # 你的密码
-    ```
-
-## ▶️ 使用方法
-
-### 🚀 推荐方式 (Windows)
+### 🚀 快速启动 (Windows)
 直接双击运行根目录下的 **`start.bat`**。
-*   脚本会自动尝试激活名为 `szu-net` 的 Conda 环境。
-*   如果未找到 Conda 环境，将回退使用系统 Python。
-*   启动后将进入守护模式，持续监控网络。
+*   脚本会自动激活环境并启动 TUI 仪表盘。
+*   默认进入守护模式。
 
-### 💻 命令行方式
+### 💻 命令行启动
+如果您偏好命令行或在 Linux/macOS 上运行：
+
+#### 方式一：启动 TUI 面板 (推荐)
 ```bash
-# 单次登录
+python cli.py
+```
+*这将展示带动画和面板的交互式界面。*
+
+#### 方式二：后台纯净模式
+```bash
+# 单次登录（执行完即退出）
 python main.py
 
-# 开启守护模式 (每300秒检查一次)
+# 开启守护模式 (持续监控)
 python main.py --loop
 
 # 自定义检查间隔 (例如 60 秒)
 python main.py --loop --interval 60
 ```
 
-## ⚙️ 高级配置 (.env)
+## 🏗️ 项目架构 (Architecture)
 
-| 变量名 | 默认值 | 说明 |
-| :--- | :--- | :--- |
-| `SRUN_USERNAME` | - | **(必填)** 校园网账号 |
-| `SRUN_PASSWORD` | - | **(必填)** 校园网密码 |
-| `RETRY_INTERVAL` | 300 | 守护模式下的重试/检查间隔(秒) |
-| `SRUN_AC_ID` | 12 | AC ID (教学区通常为 12) |
+*   **Entry Points**:
+    *   `cli.py`: 用户入口，提供 Rich TUI 界面。
+    *   `main.py`: 核心逻辑入口，处理参数解析和信号。
+*   **App Core (`app/`)**:
+    *   `client.py`: 核心客户端类 `SZUNetworkClient`。使用 **策略模式** 根据 `NETWORK_ZONE` 动态切换登录逻辑。
+    *   `config.py`: 基于 `pydantic` 的强类型配置管理。
+*   **Encryption (`encryption/`)**:
+    *   包含处理 SRUN 协议所需的 XEncode, MD5, SHA1 算法实现及 `srun_base64.js`。
 
-## ❓ 常见问题
+## 📝 许可证 (License)
 
-*   **`execjs.RuntimeUnavailable`**: 
-    *   请确保已安装 Node.js 并将其添加到系统环境变量 PATH 中。
-*   **启动闪退**: 
-    *   请先在命令行运行 `start.bat` 查看具体报错信息。
-    *   检查 `.env` 文件是否存在且格式正确。
-*   **一直提示 "Login failed"**: 
-    *   检查账号密码是否正确。
-    *   检查是否欠费。
-    *   尝试手动登录 `net.szu.edu.cn` 确认账号状态。
-
-## 📝 许可证
-
-MIT License
+[MIT License](LICENSE)
