@@ -19,13 +19,13 @@ It features a "keep-alive" daemon mode that continuously monitors network connec
     - `loguru`: For structured logging.
   - **CLI & UI**:
     - `rich`: For beautiful terminal output, dashboards, and animations.
-    - `click`: (Implicitly used or available for future CLI expansion).
   - **GUI (Windows)**:
+    - `ttkbootstrap`: For modern, themed Tkinter-based window management.
     - `pystray`: For system tray icon and menu management.
-    - `Pillow` (PIL): For generating tray icons.
-    - `pywin32` (`win32gui`, `win32con`): For window management (hiding/showing console).
+    - `Pillow` (PIL): For generating and handling tray icons.
+    - `pywin32` (`win32gui`, `win32con`): For window management (hiding/showing console) and AppID setting.
 - **Runtime Environment**:
-  - **OS**: Cross-platform (Windows, Linux, macOS) for CLI; Windows-specific features for GUI.
+  - **OS**: Cross-platform (Windows, Linux, macOS) for CLI; Windows-specific features for GUI/Tray.
   - **Dependencies**: Node.js (required by `PyExecJS` for SRUN encryption).
 
 ## Project Conventions
@@ -37,9 +37,12 @@ It features a "keep-alive" daemon mode that continuously monitors network connec
 
 ### Structure
 - **Entry Points**:
-  - `gui.py`: **System Tray Application**. Runs the daemon in a background thread and manages a tray icon for visibility control.
-  - `cli.py`: **Rich CLI**. The primary terminal entry point, featuring a TUI dashboard and startup animations.
-  - `main.py`: **Core Runner**. Handles argument parsing (`--loop`, `--interval`), signal handling (SIGINT/SIGTERM), and logging configuration.
+  - `app_gui.py`: **Modern GUI Application**. The primary entry point (launched via `start.bat`). Uses `ttkbootstrap` for a dark-themed control panel and `pystray` for system tray integration.
+  - `cli.py`: **Rich CLI**. The terminal entry point, featuring a TUI dashboard and startup animations.
+  - `gui.py`: **Legacy Tray App**. A simpler, tray-only implementation (mostly superseded by `app_gui.py`).
+  - `main.py`: **Core Runner**. Handles argument parsing (`--loop`, `--interval`) and exports `run_daemon` for use by other entry points.
+- **Scripts**:
+  - `start.bat`: Windows batch script to launch `app_gui.py` in the background (using `pythonw`).
 - **`app/`**:
   - `client.py`: `SZUNetworkClient`. Implements the Strategy pattern to switch between `_login_teaching` (SRUN) and `_login_dorm` (Dr.COM) based on config.
   - `config.py`: `Settings` definition using `pydantic`.
