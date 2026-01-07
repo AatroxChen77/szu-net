@@ -15,6 +15,8 @@ from encryption.srun_xencode import get_xencode
 class SZUNetworkClient:
     def __init__(self):
         self.session = requests.Session()
+        # Bypass system proxies (e.g. Clash) to ensure direct intranet access
+        self.session.trust_env = False
         self.session.headers.update({'User-Agent': settings.USER_AGENT})
         # Lazy loading of JS context: only initialize if needed (Teaching Zone)
         if settings.NETWORK_ZONE == 'teaching':
