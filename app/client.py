@@ -49,7 +49,7 @@ class SZUNetworkClient:
         
         logger.debug(f"Requesting challenge token for IP: {ip}")
         try:
-            resp = self.session.get(settings.GET_CHALLENGE_API, params=params, timeout=10)
+            resp = self.session.get(settings.GET_CHALLENGE_API, params=params, timeout=settings.REQUEST_TIMEOUT)
             resp.raise_for_status()
             # Extract token using regex
             match = re.search(r'"challenge":"(.*?)"', resp.text)
@@ -137,7 +137,7 @@ class SZUNetworkClient:
             }
             
             logger.debug("Sending login request...")
-            resp = self.session.get(settings.SRUN_PORTAL_API, params=params, timeout=10)
+            resp = self.session.get(settings.SRUN_PORTAL_API, params=params, timeout=settings.REQUEST_TIMEOUT)
             resp.raise_for_status()
             
             # Parse response
@@ -187,7 +187,7 @@ class SZUNetworkClient:
             url = "http://172.30.255.42:801/eportal/portal/login"
             
             logger.debug("Sending Dorm Zone login request...")
-            resp = self.session.get(url, params=params, timeout=10)
+            resp = self.session.get(url, params=params, timeout=settings.REQUEST_TIMEOUT)
             resp.raise_for_status()
             
             # Handle potential encoding issues (Dr.COM might return GBK/GB2312)
@@ -250,7 +250,7 @@ class SZUNetworkClient:
         Daemon mode: Check network status periodically and relogin if disconnected.
         :param stop_event: threading.Event or similar object to signal shutdown
         """
-        logger.info(f"Starting Keep-Alive Daemon (Interval: {settings.RETRY_INTERVAL}s)")
+        logger.info(f"Starting Keep-Alive Daemon (Check Interval: {settings.CHECK_INTERVAL}s)")
         
         while not (stop_event and stop_event.is_set()):
             try:
@@ -267,9 +267,11 @@ class SZUNetworkClient:
                 logger.error(f"Unexpected error in daemon loop: {e}")
             
             # 3. 休息 (Support graceful interrupt during sleep)
+            # Use CHECK_INTERVAL for standard keep-alive
+            interval = settings.CHECK_INTERVAL
             if stop_event:
-                if stop_event.wait(settings.RETRY_INTERVAL):
+                if stop_event.wait(interval):
                     logger.info("Daemon stopping received signal.")
                     break
             else:
-                time.sleep(settings.RETRY_INTERVAL)
+                time.sleep(interval)

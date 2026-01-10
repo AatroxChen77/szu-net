@@ -31,13 +31,17 @@ class Settings(BaseSettings):
     USER_AGENT: str = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.26 Safari/537.36'
 
     # App Config
-    RETRY_INTERVAL: int = 300  # seconds
+    RETRY_INTERVAL: int = 300  # seconds (Used in daemon loop)
+    CHECK_INTERVAL: int = 10   # seconds (New: Check frequency)
+    REQUEST_TIMEOUT: int = 5   # seconds (New: Request timeout)
     MAX_RETRIES: int = 3
+    START_MINIMIZED: bool = False # New: Startup behavior
     
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
+        validate_assignment=True
     )
 
     @field_validator('SRUN_USERNAME', 'SRUN_PASSWORD')
@@ -47,7 +51,7 @@ class Settings(BaseSettings):
             raise ValueError('Must not be empty')
         return v
 
-    @field_validator('RETRY_INTERVAL')
+    @field_validator('RETRY_INTERVAL', 'CHECK_INTERVAL', 'REQUEST_TIMEOUT', 'MAX_RETRIES')
     @classmethod
     def validate_positive(cls, v: int) -> int:
         if v <= 0:

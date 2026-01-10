@@ -62,12 +62,16 @@ class SZUNetworkGUI(ttk.Window):
         # Load initial config
         self.load_config()
         
+        # Singleton flag for settings window
+        self._settings_window = None
+        
         # Start Log Polling Loop
         self.update_log_console()
 
         # Enforce Visibility on Startup (User Request)
-        # Always show the window so the user knows the app is running.
-        self.deiconify()
+        # Only show the window if START_MINIMIZED is False to prevent "flashing"
+        if not settings.START_MINIMIZED:
+            self.deiconify()
 
     def setup_logging(self):
         """Configure Loguru to sink logs into our queue."""
@@ -128,6 +132,16 @@ class SZUNetworkGUI(ttk.Window):
             padding=(5, 2)
         )
         self.status_label.pack(side=RIGHT)
+
+        # Settings Button (Gear Unicode)
+        self.settings_btn = ttk.Button(
+            header_frame, 
+            text="⚙", 
+            bootstyle="link", 
+            command=self.open_settings_window,
+            width=3
+        )
+        self.settings_btn.pack(side=RIGHT, padx=(0, 10))
 
         # Heartbeat Indicator
         self.lbl_heartbeat = ttk.Label(
@@ -258,6 +272,83 @@ class SZUNetworkGUI(ttk.Window):
         """Handle the 'Run at Startup' checkbox toggle."""
         toggle_startup(self.startup_var.get())
 
+    def open_settings_window(self, icon=None, item=None):
+        """Open the Advanced Settings modal window (Singleton)."""
+        # Ensure we run this on the main thread if called from tray
+        if threading.current_thread() != threading.main_thread():
+            self.after(0, self.open_settings_window)
+            return
+
+        if self._settings_window is not None and self._settings_window.winfo_exists():
+            self._settings_window.lift()
+            return
+
+        self._settings_window = ttk.Toplevel(self)
+        self._settings_window.title("Advanced Settings")
+        self._settings_window.geometry("400x450")
+        self._settings_window.resizable(False, False)
+        self._settings_window.grab_set() # Modal
+
+        container = ttk.Frame(self._settings_window, padding=20)
+        container.pack(fill=BOTH, expand=YES)
+
+        ttk.Label(container, text="Advanced System Parameters", font=("Segoe UI", 12, "bold"), bootstyle="info").pack(pady=(0, 20))
+
+        # 1. Keep-Alive Interval
+        ttk.Label(container, text="Check Interval (s) - 心跳检测间隔").pack(anchor=W)
+        interval_spin = ttk.Spinbox(container, from_=1, to=3600, bootstyle="info")
+        interval_spin.set(settings.CHECK_INTERVAL)
+        interval_spin.pack(fill=X, pady=(5, 15))
+
+        # 2. Request Timeout
+        ttk.Label(container, text="Request Timeout (s) - 请求超时阈值").pack(anchor=W)
+        timeout_spin = ttk.Spinbox(container, from_=1, to=60, bootstyle="info")
+        timeout_spin.set(settings.REQUEST_TIMEOUT)
+        timeout_spin.pack(fill=X, pady=(5, 15))
+
+        # 3. Max Retries
+        ttk.Label(container, text="Max Retries - 最大重试次数").pack(anchor=W)
+        retries_spin = ttk.Spinbox(container, from_=1, to=10, bootstyle="info")
+        retries_spin.set(settings.MAX_RETRIES)
+        retries_spin.pack(fill=X, pady=(5, 15))
+
+        # 4. Start Minimized
+        start_min_var = ttk.BooleanVar(value=settings.START_MINIMIZED)
+        ttk.Checkbutton(container, text="Start Minimized to Tray (开机后自动隐藏到托盘)", variable=start_min_var).pack(anchor=W, pady=(0, 20))
+
+        def save_advanced_settings():
+            try:
+                new_interval = int(interval_spin.get())
+                new_timeout = int(timeout_spin.get())
+                new_retries = int(retries_spin.get())
+                new_start_min = start_min_var.get()
+
+                # Update in-memory settings immediately (Requirement)
+                settings.CHECK_INTERVAL = new_interval
+                settings.REQUEST_TIMEOUT = new_timeout
+                settings.MAX_RETRIES = new_retries
+                settings.START_MINIMIZED = new_start_min
+
+                # Persist to .env
+                env_path = settings.PROJECT_ROOT / ".env"
+                set_key(env_path, "CHECK_INTERVAL", str(new_interval))
+                set_key(env_path, "REQUEST_TIMEOUT", str(new_timeout))
+                set_key(env_path, "MAX_RETRIES", str(new_retries))
+                set_key(env_path, "START_MINIMIZED", str(new_start_min))
+
+                logger.success("Advanced settings updated and saved.")
+                self._settings_window.destroy()
+            except ValueError:
+                logger.error("Invalid input: Please enter numeric values.")
+            except Exception as e:
+                logger.error(f"Failed to save advanced settings: {e}")
+
+        btn_frame = ttk.Frame(container)
+        btn_frame.pack(fill=X, pady=(10, 0))
+        
+        ttk.Button(btn_frame, text="Cancel", bootstyle="secondary-outline", command=self._settings_window.destroy).pack(side=RIGHT, padx=(10, 0))
+        ttk.Button(btn_frame, text="Apply & Save", bootstyle="primary", command=save_advanced_settings).pack(side=RIGHT)
+
     def setup_control_frame(self):
         """Control Buttons."""
         control_frame = ttk.Frame(self.main_container)
@@ -317,6 +408,7 @@ class SZUNetworkGUI(ttk.Window):
         """Initialize the system tray icon immediately."""
         menu = pystray.Menu(
             pystray.MenuItem("Show Window", self.show_window, default=True),
+            pystray.MenuItem("Settings", self.open_settings_window),
             pystray.MenuItem("Exit", self.quit_app)
         )
         # Use the already loaded icon image
