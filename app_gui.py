@@ -12,17 +12,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from app.config import settings
 from app.client import SZUNetworkClient
-
-class QueueSink:
-    """
-    Custom Loguru Sink to push logs into a thread-safe queue.
-    Prevents GUI crashes caused by logging from background threads.
-    """
-    def __init__(self, log_queue):
-        self.log_queue = log_queue
-
-    def write(self, message):
-        self.log_queue.put(message)
+from app.log_utils import setup_logger
 
 class SZUNetworkGUI(ttk.Window):
     """
@@ -79,9 +69,7 @@ class SZUNetworkGUI(ttk.Window):
 
     def setup_logging(self):
         """Configure Loguru to sink logs into our queue."""
-        sink = QueueSink(self.log_queue)
-        # Clean English Log Format
-        logger.add(sink, format="{time:HH:mm:ss} | <level>{level: <8}</level> | {message}", level="INFO")
+        setup_logger(self.log_queue)
 
     def load_config(self):
         """Load settings from environment variables."""
