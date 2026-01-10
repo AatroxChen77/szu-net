@@ -85,7 +85,8 @@ class SZUNetworkGUI(ttk.Window):
         while not self.log_queue.empty():
             msg = self.log_queue.get()
             
-            if "HEARTBEAT_SIGNAL" in msg:
+            # Stricter check to prevent accidental interception of standard logs
+            if msg.strip().endswith("SYS_HEARTBEAT_SIGNAL"):
                 # Heartbeat Logic
                 current_time = time.strftime("%H:%M:%S")
                 self.lbl_heartbeat.configure(text=f"Last Heartbeat: {current_time}", bootstyle="success")
