@@ -182,34 +182,77 @@ class SZUNetworkGUI(ttk.Window):
         )
         self.startup_chk.grid(row=3, column=0, columnspan=2, sticky=W, pady=(10, 0))
 
-        # Save Button
-        self.save_btn = ttk.Button(config_group, text="Save Settings", bootstyle="outline-primary", command=self.save_config)
+        # Verify & Save Button
+        self.save_btn = ttk.Button(
+            config_group, 
+            text="Verify & Save Credentials", 
+            bootstyle="outline-primary", 
+            command=self.verify_and_save_credentials
+        )
         self.save_btn.grid(row=4, column=0, columnspan=2, sticky=EW, pady=(15, 0))
 
-    def save_config(self):
-        """Save config to .env and reload settings."""
+    def on_zone_change(self):
+        """Handle immediate zone switching."""
+        new_zone = self.zone_var.get()
+        try:
+            env_path = settings.PROJECT_ROOT / ".env"
+            set_key(env_path, "NETWORK_ZONE", new_zone)
+            settings.NETWORK_ZONE = new_zone
+            logger.success(f"Network zone switched to {new_zone} (Immediate effect)")
+        except Exception as e:
+            logger.error(f"Failed to switch zone: {e}")
+
+    def verify_and_save_credentials(self):
+        """Test credentials before saving them to disk."""
         user = self.username_var.get().strip()
         pwd = self.password_var.get().strip()
-        zone = self.zone_var.get()
-        
+
         if not user or not pwd:
             logger.error("Credentials cannot be empty.")
             return
 
+        # Disable UI during test
+        self.save_btn.configure(text="Verifying...", state="disabled")
+        
+        # Run verification in background thread
+        threading.Thread(target=self._test_credentials_thread, args=(user, pwd), daemon=True).start()
+
+    def _test_credentials_thread(self, user, pwd):
+        """Background thread for credential testing."""
         try:
-            env_path = settings.PROJECT_ROOT / ".env"
-            set_key(env_path, "SRUN_USERNAME", user)
-            set_key(env_path, "SRUN_PASSWORD", pwd)
-            set_key(env_path, "NETWORK_ZONE", zone)
+            client = SZUNetworkClient(username=user, password=pwd)
+            success = client.login() # Test with current zone
             
-            # Hot reload logic
-            settings.SRUN_USERNAME = user
-            settings.SRUN_PASSWORD = pwd
-            settings.NETWORK_ZONE = zone
-            
-            logger.success("Settings saved and reloaded.")
+            # Back to main thread for UI updates
+            self.after(0, lambda: self._on_verification_result(success, user, pwd))
         except Exception as e:
-            logger.error(f"Failed to save settings: {e}")
+            logger.error(f"Verification process error: {e}")
+            self.after(0, lambda: self._on_verification_result(False, user, pwd))
+
+    def _on_verification_result(self, success, user, pwd):
+        """Handle the result of credential verification on the main thread."""
+        if success:
+            try:
+                env_path = settings.PROJECT_ROOT / ".env"
+                set_key(env_path, "SRUN_USERNAME", user)
+                set_key(env_path, "SRUN_PASSWORD", pwd)
+                
+                # Update in-memory settings
+                settings.SRUN_USERNAME = user
+                settings.SRUN_PASSWORD = pwd
+                
+                logger.success("Credentials verified and saved successfully.")
+                self.save_btn.configure(bootstyle="success")
+                self.after(2000, lambda: self.save_btn.configure(bootstyle="outline-primary"))
+            except Exception as e:
+                logger.error(f"Failed to save verified credentials: {e}")
+        else:
+            logger.error("Credential verification failed. Settings NOT saved.")
+            self.save_btn.configure(bootstyle="danger")
+            self.after(2000, lambda: self.save_btn.configure(bootstyle="outline-primary"))
+
+        # Re-enable button
+        self.save_btn.configure(text="Verify & Save Credentials", state="normal")
 
     def on_startup_toggle(self):
         """Handle the 'Run at Startup' checkbox toggle."""
