@@ -231,8 +231,8 @@ class SZUNetworkClient:
             try:
                 # 1. 先做体检：网络通吗？
                 if is_internet_connected():
-                    # 网络正常，只打印个 debug 日志（平时看不见，清爽）
-                    logger.debug("✅ Network check passed (Status: 204/200). Sleeping...")
+                    # 网络正常，发送心跳信号（GUI会拦截显示为指示器闪烁，文件日志记录为DEBUG）
+                    logger.debug("HEARTBEAT_SIGNAL")
                 else:
                     # 2. 网络断了！触发登录
                     logger.warning("⚠️ Network disconnected or captive portal detected! Initiating login...")

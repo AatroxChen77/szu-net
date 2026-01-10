@@ -3,6 +3,7 @@ import queue
 import pystray
 import pathlib
 import ctypes
+import time
 from PIL import Image, ImageDraw, ImageTk
 from dotenv import set_key
 from loguru import logger
@@ -83,10 +84,20 @@ class SZUNetworkGUI(ttk.Window):
         """
         while not self.log_queue.empty():
             msg = self.log_queue.get()
-            self.log_text.text.configure(state="normal")
-            self.log_text.text.insert(END, msg)
-            self.log_text.text.see(END)
-            self.log_text.text.configure(state="disabled")
+            
+            if "HEARTBEAT_SIGNAL" in msg:
+                # Heartbeat Logic
+                current_time = time.strftime("%H:%M:%S")
+                self.lbl_heartbeat.configure(text=f"Last Heartbeat: {current_time}", bootstyle="success")
+                self.after(500, lambda: self.lbl_heartbeat.configure(bootstyle="secondary"))
+            else:
+                # Standard Log Logic
+                # Ensure message ends with newline for proper stacking
+                formatted_msg = msg if msg.endswith('\n') else msg + '\n'
+                self.log_text.text.configure(state="normal")
+                self.log_text.text.insert(END, formatted_msg)
+                self.log_text.text.see(END)
+                self.log_text.text.configure(state="disabled")
         
         # Schedule next check in 100ms
         self.after(100, self.update_log_console)
@@ -114,6 +125,15 @@ class SZUNetworkGUI(ttk.Window):
             padding=(5, 2)
         )
         self.status_label.pack(side=RIGHT)
+
+        # Heartbeat Indicator
+        self.lbl_heartbeat = ttk.Label(
+            header_frame, 
+            text="Last Heartbeat: --:--:--", 
+            bootstyle="secondary", 
+            font=("Consolas", 9)
+        )
+        self.lbl_heartbeat.pack(side=RIGHT, padx=(0, 10))
 
     def update_connection_status(self, connected=False):
         if connected:
