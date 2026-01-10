@@ -13,11 +13,16 @@ from encryption.srun_sha1 import get_sha1
 from encryption.srun_xencode import get_xencode
 
 class SZUNetworkClient:
-    def __init__(self):
+    def __init__(self, username=None, password=None):
         self.session = requests.Session()
         # Bypass system proxies (e.g. Clash) to ensure direct intranet access
         self.session.trust_env = False
         self.session.headers.update({'User-Agent': settings.USER_AGENT})
+        
+        # Use provided credentials or fallback to settings
+        self.username = username or settings.SRUN_USERNAME
+        self.password = password or settings.SRUN_PASSWORD
+        
         # Lazy loading of JS context: only initialize if needed (Teaching Zone)
         if settings.NETWORK_ZONE == 'teaching':
             self._init_js_context()
@@ -37,7 +42,7 @@ class SZUNetworkClient:
         timestamp = int(time.time() * 1000)
         params = {
             "callback": f"jQuery112404953340710317169_{timestamp}",
-            "username": settings.SRUN_USERNAME,
+            "username": self.username,
             "ip": ip,
             "_": timestamp,
         }
@@ -63,8 +68,8 @@ class SZUNetworkClient:
     def _get_info_str(self, ip: str) -> str:
         """Construct the info JSON string required for encryption."""
         info = {
-            "username": settings.SRUN_USERNAME,
-            "password": settings.SRUN_PASSWORD,
+            "username": self.username,
+            "password": self.password,
             "ip": ip,
             "acid": settings.SRUN_AC_ID,
             "enc_ver": settings.SRUN_ENC
@@ -78,7 +83,7 @@ class SZUNetworkClient:
 
     def _get_chksum(self, token: str, hmd5: str, ip: str, info_str: str) -> str:
         """Calculate the checksum."""
-        chkstr = f"{token}{settings.SRUN_USERNAME}"
+        chkstr = f"{token}{self.username}"
         chkstr += f"{token}{hmd5}"
         chkstr += f"{token}{settings.SRUN_AC_ID}"
         chkstr += f"{token}{ip}"
@@ -96,7 +101,7 @@ class SZUNetworkClient:
         encoded_info = "{SRBX1}" + self.ctx.call('_encode', xencoded)
         
         # 2. MD5 hash of password
-        hmd5 = get_md5(settings.SRUN_PASSWORD, token)
+        hmd5 = get_md5(self.password, token)
         
         # 3. SHA1 checksum
         chkstr = self._get_chksum(token, hmd5, ip, encoded_info)
@@ -108,7 +113,7 @@ class SZUNetworkClient:
         """Execute the full login flow for Teaching Zone (SRUN)."""
         try:
             ip = get_local_ip()
-            logger.info(f"Starting login process for IP: {ip} / User: {settings.SRUN_USERNAME}")
+            logger.info(f"Starting login process for IP: {ip} / User: {self.username}")
             
             token = self._get_token(ip)
             encoded_info, hmd5, chksum = self._encrypt_payload(ip, token)
@@ -117,7 +122,7 @@ class SZUNetworkClient:
             params = {
                 'callback': f'jQuery11240645308969735664_{timestamp}',
                 'action': 'login',
-                'username': settings.SRUN_USERNAME,
+                'username': self.username,
                 'password': '{MD5}' + hmd5,
                 'ac_id': settings.SRUN_AC_ID,
                 'ip': ip,
@@ -166,14 +171,14 @@ class SZUNetworkClient:
         """Execute the login flow for Dorm Zone (Dr.COM)."""
         try:
             ip = get_local_ip()
-            logger.info(f"Starting Dorm Zone login process for IP: {ip} / User: {settings.SRUN_USERNAME}")
+            logger.info(f"Starting Dorm Zone login process for IP: {ip} / User: {self.username}")
             
             timestamp = int(time.time() * 1000)
             params = {
                 'callback': 'dr1003',
                 'login_method': '1',
-                'user_account': f',0,{settings.SRUN_USERNAME}',
-                'user_password': settings.SRUN_PASSWORD,
+                'user_account': f',0,{self.username}',
+                'user_password': self.password,
                 'wlan_user_ip': ip,
                 'jsVersion': '4.1.3'
             }
@@ -219,6 +224,26 @@ class SZUNetworkClient:
         else:
             logger.info("Executing Teaching Zone Login Strategy")
             return self._login_teaching()
+
+    def verify_credentials(self, username, password) -> bool:
+        """
+        Temporarily use provided credentials to verify if they work.
+        """
+        old_user = self.username
+        old_pwd = self.password
+        self.username = username
+        self.password = password
+        
+        try:
+            # If we were in dorm zone but switching to teaching, we might need JS context
+            if settings.NETWORK_ZONE == 'teaching' and not hasattr(self, 'ctx'):
+                self._init_js_context()
+            
+            success = self.login()
+            return success
+        finally:
+            self.username = old_user
+            self.password = old_pwd
 
     def keep_alive(self, stop_event=None):
         """

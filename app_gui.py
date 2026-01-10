@@ -14,6 +14,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 from app.config import settings
 from app.client import SZUNetworkClient
 from app.log_utils import setup_logger
+from app.startup_utils import get_startup_status, toggle_startup
 
 class SZUNetworkGUI(ttk.Window):
     """
@@ -73,10 +74,11 @@ class SZUNetworkGUI(ttk.Window):
         setup_logger(self.log_queue)
 
     def load_config(self):
-        """Load settings from environment variables."""
+        """Load settings from environment variables and registry."""
         self.username_var.set(settings.SRUN_USERNAME)
         self.password_var.set(settings.SRUN_PASSWORD)
         self.zone_var.set(settings.NETWORK_ZONE)
+        self.startup_var.set(get_startup_status())
 
     def update_log_console(self):
         """
@@ -167,12 +169,22 @@ class SZUNetworkGUI(ttk.Window):
         zone_frame = ttk.Frame(config_group)
         zone_frame.grid(row=2, column=1, sticky=EW, padx=(10, 0), pady=5)
         
-        ttk.Radiobutton(zone_frame, text="Teaching", variable=self.zone_var, value="teaching").pack(side=LEFT, padx=(0, 15))
-        ttk.Radiobutton(zone_frame, text="Dormitory", variable=self.zone_var, value="dorm").pack(side=LEFT)
+        ttk.Radiobutton(zone_frame, text="Teaching", variable=self.zone_var, value="teaching", command=self.on_zone_change).pack(side=LEFT, padx=(0, 15))
+        ttk.Radiobutton(zone_frame, text="Dormitory", variable=self.zone_var, value="dorm", command=self.on_zone_change).pack(side=LEFT)
         
+        # Run at Startup Toggle
+        self.startup_var = ttk.BooleanVar()
+        self.startup_chk = ttk.Checkbutton(
+            config_group, 
+            text="Run at Startup (开机自启)", 
+            variable=self.startup_var,
+            command=self.on_startup_toggle
+        )
+        self.startup_chk.grid(row=3, column=0, columnspan=2, sticky=W, pady=(10, 0))
+
         # Save Button
         self.save_btn = ttk.Button(config_group, text="Save Settings", bootstyle="outline-primary", command=self.save_config)
-        self.save_btn.grid(row=3, column=0, columnspan=2, sticky=EW, pady=(15, 0))
+        self.save_btn.grid(row=4, column=0, columnspan=2, sticky=EW, pady=(15, 0))
 
     def save_config(self):
         """Save config to .env and reload settings."""
@@ -198,6 +210,10 @@ class SZUNetworkGUI(ttk.Window):
             logger.success("Settings saved and reloaded.")
         except Exception as e:
             logger.error(f"Failed to save settings: {e}")
+
+    def on_startup_toggle(self):
+        """Handle the 'Run at Startup' checkbox toggle."""
+        toggle_startup(self.startup_var.get())
 
     def setup_control_frame(self):
         """Control Buttons."""
