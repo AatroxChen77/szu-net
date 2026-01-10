@@ -38,10 +38,11 @@ class SZUNetworkGUI(ttk.Window):
         self.log_queue = queue.Queue()
         self.setup_logging()
 
-        # Load Icon
-        self.icon_image = self.load_icon()
-        # Keep a reference to the ImageTk object to prevent garbage collection
-        self.tk_icon = ImageTk.PhotoImage(self.icon_image)
+        # Load Icons for dynamic switching
+        self.icon_online = self.load_icon(state="online")
+        self.icon_offline = self.load_icon(state="offline")
+        # Keep a reference to the main app icon for the window title bar
+        self.tk_icon = ImageTk.PhotoImage(self.load_icon(name="icon.png"))
         # Apply icon to window title bar
         self.wm_iconphoto(True, self.tk_icon)
         
@@ -156,9 +157,13 @@ class SZUNetworkGUI(ttk.Window):
         if connected:
             self.status_var.set("Online")
             self.status_label.configure(bootstyle="success.inverse") # Green background
+            if self.tray_icon:
+                self.tray_icon.icon = self.icon_online
         else:
             self.status_var.set("Offline")
             self.status_label.configure(bootstyle="danger.inverse") # Red background
+            if self.tray_icon:
+                self.tray_icon.icon = self.icon_offline
 
     def setup_config_frame(self):
         """Configuration Inputs."""
@@ -411,36 +416,56 @@ class SZUNetworkGUI(ttk.Window):
             pystray.MenuItem("Settings", self.open_settings_window),
             pystray.MenuItem("Exit", self.quit_app)
         )
-        # Use the already loaded icon image
-        self.tray_icon = pystray.Icon("SZU Net", self.icon_image, "SZU Network Guardian", menu)
+        # Use the offline icon as default state
+        self.tray_icon = pystray.Icon("SZU Net", self.icon_offline, "SZU Network Guardian", menu)
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
-    def load_icon(self):
+    def load_icon(self, name=None, state="online"):
         """
-        Load 'assets/icon.png' if it exists, otherwise generate a default colored square.
+        Load an icon from assets or generate a high-quality fallback.
+        Args:
+            name (str, optional): Specific filename to load.
+            state (str): 'online' or 'offline' for state-based loading.
         Returns: PIL.Image
         """
-        icon_path = pathlib.Path(__file__).parent / "assets" / "icon.png"
+        # Determine target filename if not specified
+        if name is None:
+            name = "tray_on.png" if state == "online" else "tray_off.png"
+            
+        icon_path = pathlib.Path(__file__).parent / "assets" / name
         
         if icon_path.exists():
             try:
                 return Image.open(icon_path)
             except Exception as e:
                 logger.warning(f"Failed to load icon from {icon_path}: {e}")
+        
+        # Fallback: Generate 64x64 high-quality icons programmatically
+        width, height = 64, 64
+        
+        if state == "online":
+            # Solid Cyan Filled Square
+            image = Image.new('RGB', (width, height), (0, 255, 255))
+            draw = ImageDraw.Draw(image)
+            draw.rectangle(
+                (width // 4, height // 4, width * 3 // 4, height * 3 // 4),
+                fill=(255, 255, 255)
+            )
+            return image
         else:
-            logger.warning(f"Icon not found at {icon_path}. Using default.")
-            
-        # Fallback: Generate a 64x64 icon programmatically
-        width = 64
-        height = 64
-        color = (0, 255, 255) # Cyan
-        image = Image.new('RGB', (width, height), color)
-        dc = ImageDraw.Draw(image)
-        dc.rectangle(
-            (width // 4, height // 4, width * 3 // 4, height * 3 // 4),
-            fill=(255, 255, 255)
-        )
-        return image
+            # Hollow Gray Outline with Transparency (RGBA)
+            # Create a fully transparent background
+            image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(image)
+            # Draw gray outline
+            outline_color = (128, 128, 128, 255)
+            draw.rectangle(
+                (width // 4, height // 4, width * 3 // 4, height * 3 // 4),
+                outline=outline_color,
+                width=4,
+                fill=None # Transparent center
+            )
+            return image
 
     def on_close_request(self):
         """Minimize to Tray on Close."""
