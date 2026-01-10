@@ -23,11 +23,12 @@ def setup_logger(ui_queue=None):
     logger.remove()
     
     # 1. Console Stream
-    logger.add(
-        sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
-        level="INFO"
-    )
+    if sys.stderr:
+        logger.add(
+            sys.stderr,
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+            level="INFO"
+        )
 
     # 2. File Stream (Backend)
     log_path = Path("logs/szu_net.log")
@@ -50,6 +51,6 @@ def setup_logger(ui_queue=None):
         sink = QueueSink(ui_queue)
         logger.add(
             sink, 
-            format="{time:HH:mm:ss} | <level>{level: <8}</level> | {message}", 
+            format="{time:YYYY-MM-DD HH:mm:ss} | <level>{level: <8}</level> | {message}", 
             level="INFO"
         )
