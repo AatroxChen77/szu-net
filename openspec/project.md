@@ -26,12 +26,13 @@ The application features a "keep-alive" daemon mode that continuously monitors n
 
 -   **CLI & Terminal UI**:
     -   [`rich`](https://pypi.org/project/rich/): For rendering beautiful terminal dashboards, tables, spinners, and colored output.
+    -   [`click`](https://pypi.org/project/click/) & `argparse`: For command-line argument parsing and CLI interaction.
 
 -   **GUI & System Integration (Windows)**:
     -   [`ttkbootstrap`](https://pypi.org/project/ttkbootstrap/): For a modern, Bootstrap-styled Tkinter GUI (specifically the "cyborg" dark theme).
     -   [`pystray`](https://pypi.org/project/pystray/): For system tray icon management and context menus.
     -   [`Pillow` (PIL)](https://pypi.org/project/Pillow/): For image processing required by the tray icon.
-    -   [`pywin32`](https://pypi.org/project/pywin32/) (`win32gui`, `win32con`): For advanced Windows API interactions (e.g., hiding console windows, setting AppUserModelID).
+    -   [`pywin32`](https://pypi.org/project/pywin32/) (`win32gui`, `win32con`, `ctypes`): For advanced Windows API interactions (e.g., setting AppUserModelID for taskbar grouping).
 
 ## Project Conventions
 
@@ -39,23 +40,37 @@ The application features a "keep-alive" daemon mode that continuously monitors n
 -   **Naming**: Follows PEP 8 `snake_case` for variables and functions, `PascalCase` for classes.
 -   **Typing**: Extensive use of Python type hints (e.g., `def login(self) -> bool:`) for better developer experience and static analysis.
 -   **Configuration**: The [12-Factor App](https://12factor.net/config) principle is followed. Configuration is strictly separated from code, managed via a `.env` file, and loaded into a global `Settings` singleton.
--   **Logging**: All output is routed through `loguru`. In the GUI, a custom `QueueSink` is used to safely redirect logs from background threads to the UI thread.
+
+### Logging
+The project employs a **Triple-Stream Strategy** managed by `app/log_utils.py` to ensure observability across all interfaces:
+1.  **Console Stream**: `INFO` level. Formatted for readability in development and CLI usage.
+2.  **File Stream**: `DEBUG` level. Writes to `logs/szu_net.log` with daily rotation ("00:00") and 7-day retention. Useful for auditing and debugging.
+3.  **GUI Stream**: `INFO` level. Uses a custom `QueueSink` to safely redirect logs from background threads to the main UI thread (displayed in the `ttkbootstrap` text widget).
 
 ### Project Structure
 -   **Entry Points**:
-    -   `app_gui.py`: **Primary GUI Application**. Launches the `ttkbootstrap` window and system tray icon. Sets the Windows AppUserModelID for proper taskbar grouping.
-    -   `cli.py`: **CLI Dashboard**. The terminal entry point featuring a `rich` TUI.
-    -   `main.py`: **Core Runner**. Handles command-line arguments (like `--loop`, `--interval`) and exposes the `run_daemon` function.
+    -   `app_gui.py`: **Primary GUI Application**. Launches the `ttkbootstrap` window and system tray icon. Sets the Windows AppUserModelID (`szu.network.guardian.gui.v1`) for proper taskbar grouping.
+    -   `cli.py`: **CLI Dashboard**. The terminal entry point featuring a `rich` TUI with startup animations and status tables.
+    -   `main.py`: **Core Runner**. Handles command-line arguments (via `argparse`) and exposes the `run_daemon` function.
     -   `start.bat`: **Launcher**. A Windows batch script to run `app_gui.py` with `pythonw` (no console window).
-    -   `gui.py`: **Legacy**. A minimal tray-only implementation (superseded by `app_gui.py`).
 
 -   **Core Logic (`app/`)**:
     -   `client.py`: `SZUNetworkClient`. The heart of the application. Implements the authentication logic for both Teaching and Dorm zones.
     -   `config.py`: Defines the `Settings` class using `pydantic`, handling environment variable validation and defaults.
     -   `utils.py`: Network helpers, including `get_local_ip` and `is_internet_connected` (using `connect.rom.miui.com/generate_204`).
+    -   `log_utils.py`: Configures the `loguru` logger and implements the `QueueSink` for GUI integration.
 
 -   **Encryption (`encryption/`)**:
     -   Contains the logic for the Teaching Zone's complex SRUN protocol: `srun_md5.py`, `srun_sha1.py`, `srun_xencode.py`, and the JS bridge `srun_base64.js`.
+
+-   **Assets (`assets/`)**:
+    -   `icon.ico`, `icon.png`: Application icons.
+    -   `show.png`: UI preview image.
+
+-   **Documentation (`openspec/`)**:
+    -   `project.md`: This file.
+    -   `specs/`: Detailed feature specifications.
+    -   `changes/`: Change logs and task tracking.
 
 ### Architecture Patterns
 -   **Strategy Pattern (Implicit)**: The `SZUNetworkClient` dynamically switches authentication strategies (`_login_teaching` vs `_login_dorm`) based on the configured `NETWORK_ZONE`.
@@ -63,8 +78,8 @@ The application features a "keep-alive" daemon mode that continuously monitors n
 -   **Daemon/Keep-Alive Loop**: An infinite loop that periodically checks internet connectivity. It uses a "check-then-act" logic: only attempting login if the captive portal check fails.
 -   **Thread-Safe GUI**:
     -   **Concurrency**: Networking operations run in a separate daemon thread to keep the UI responsive.
-    -   **Communication**: `queue.Queue` is used to pass log messages from the worker thread to the GUI thread for display.
-    -   **Synchronization**: `threading.Event` or simple flags are used to handle graceful shutdowns.
+    -   **Communication**: `queue.Queue` (via `QueueSink`) is used to pass log messages from the worker thread to the GUI thread for display.
+    -   **Synchronization**: `threading.Event` is used to handle graceful shutdowns.
 
 ## Domain Context
 
