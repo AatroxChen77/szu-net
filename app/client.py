@@ -17,6 +17,7 @@ class SZUNetworkClient:
         self.session = requests.Session()
         # Bypass system proxies (e.g. Clash) to ensure direct intranet access
         self.session.trust_env = False
+        self.session.proxies = {}       # Explicitly clear proxies
         self.session.headers.update({'User-Agent': settings.USER_AGENT})
         
         # Use provided credentials or fallback to settings
