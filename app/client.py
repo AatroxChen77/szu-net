@@ -196,7 +196,11 @@ class SZUNetworkClient:
 
             # Strict success validation
             # Captive portals often return 200 OK even on failure, so we must check the body.
-            if '"result":1' in resp.text or '"msg":"成功"' in resp.text or "已在线" in resp.text:
+            if "已经在线" in resp.text or "already online" in resp.text.lower():
+                logger.success(f"Dorm Zone: Already online.")
+                return True
+
+            if '"result":1' in resp.text or '"msg":"成功"' in resp.text:
                 logger.success(f"Dorm Zone Login Successful!")
                 return True
             else:
