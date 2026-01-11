@@ -7,9 +7,14 @@ This project provides a robust, automated login solution for the Shenzhen Univer
 2.  **Dormitory Area**: Uses the **Dr.COM Web Portal**, which employs a simpler HTTP GET flow with specific query parameters.
 
 The application features a "keep-alive" daemon mode that continuously monitors network connectivity (via captive portal detection) and automatically attempts to reconnect when the connection is dropped. It provides multiple interfaces to suit different user needs:
--   **Modern GUI**: A dark-themed, system-tray-integrated desktop application for Windows.
+-   **Modern GUI**: A dark-themed, system-tray-integrated desktop application for Windows built with `ttkbootstrap`.
 -   **Rich CLI**: A terminal-based dashboard with startup animations and live status updates.
 -   **Legacy Tray**: A minimal system tray implementation (deprecated).
+
+**Key Features:**
+-   **Dual-Zone Support**: Seamlessly switches between Teaching and Dormitory network protocols.
+-   **Auto-Reconnect**: Continuously monitors internet access and relogins instantly upon disconnection.
+-   **System Integration**: Minimizes to system tray, supports "Run at Startup" via Windows Registry, and handles graceful shutdowns.
 
 ## Tech Stack
 
@@ -32,7 +37,8 @@ The application features a "keep-alive" daemon mode that continuously monitors n
     -   [`ttkbootstrap`](https://pypi.org/project/ttkbootstrap/): For a modern, Bootstrap-styled Tkinter GUI (specifically the "cyborg" dark theme).
     -   [`pystray`](https://pypi.org/project/pystray/): For system tray icon management and context menus.
     -   [`Pillow` (PIL)](https://pypi.org/project/Pillow/): For image processing required by the tray icon.
-    -   [`pywin32`](https://pypi.org/project/pywin32/) (`win32gui`, `win32con`, `ctypes`): For advanced Windows API interactions (e.g., setting AppUserModelID for taskbar grouping).
+    -   [`pywin32`](https://pypi.org/project/pywin32/) (`win32gui`, `win32con`, `ctypes`): For advanced Windows API interactions (e.g., setting AppUserModelID for taskbar grouping, hiding/showing console windows).
+    -   `winreg` (Standard Lib): For managing Windows Registry keys to implement "Run at Startup" functionality.
 
 ## Project Conventions
 
@@ -53,11 +59,13 @@ The project employs a **Triple-Stream Strategy** managed by `app/log_utils.py` t
     -   `cli.py`: **CLI Dashboard**. The terminal entry point featuring a `rich` TUI with startup animations and status tables.
     -   `main.py`: **Core Runner**. Handles command-line arguments (via `argparse`) and exposes the `run_daemon` function.
     -   `start.bat`: **Launcher**. A Windows batch script to run `app_gui.py` with `pythonw` (no console window).
+    -   `gui.py`: **Legacy Tray**. Deprecated minimal system tray implementation.
 
 -   **Core Logic (`app/`)**:
     -   `client.py`: `SZUNetworkClient`. The heart of the application. Implements the authentication logic for both Teaching and Dorm zones.
     -   `config.py`: Defines the `Settings` class using `pydantic`, handling environment variable validation and defaults.
     -   `utils.py`: Network helpers, including `get_local_ip` and `is_internet_connected` (using `connect.rom.miui.com/generate_204`).
+    -   `startup_utils.py`: Windows Registry helpers (`get_startup_status`, `toggle_startup`) to manage the "Run at Startup" feature.
     -   `log_utils.py`: Configures the `loguru` logger and implements the `QueueSink` for GUI integration.
 
 -   **Encryption (`encryption/`)**:
@@ -66,6 +74,7 @@ The project employs a **Triple-Stream Strategy** managed by `app/log_utils.py` t
 -   **Assets (`assets/`)**:
     -   `icon.ico`, `icon.png`: Application icons.
     -   `show.png`: UI preview image.
+    -   `tray_on.png`, `tray_off.png`: Status icons for the system tray.
 
 -   **Documentation (`openspec/`)**:
     -   `project.md`: This file.
@@ -80,6 +89,7 @@ The project employs a **Triple-Stream Strategy** managed by `app/log_utils.py` t
     -   **Concurrency**: Networking operations run in a separate daemon thread to keep the UI responsive.
     -   **Communication**: `queue.Queue` (via `QueueSink`) is used to pass log messages from the worker thread to the GUI thread for display.
     -   **Synchronization**: `threading.Event` is used to handle graceful shutdowns.
+-   **Registry Management**: Uses Windows Registry (`Software\Microsoft\Windows\CurrentVersion\Run`) to persist the "Run at Startup" preference, pointing to the `start.bat` launcher.
 
 ## Domain Context
 
